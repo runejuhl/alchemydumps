@@ -6,6 +6,7 @@ from __future__ import print_function
 
 # import third party modules
 from flask.ext.script import Manager
+from getpass import getpass
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 from unipath import Path
 
@@ -39,14 +40,24 @@ class AlchemyDumps(object):
 AlchemyDumpsCommand = Manager(usage='Backup and restore full SQL database')
 
 
-@AlchemyDumpsCommand.command
-def create():
+@AlchemyDumpsCommand.option('-e',
+                            '--encrypt',
+                            action='store_true',
+                            default=False,
+                            dest='encrypt',
+                            help='Encrypt files')
+@AlchemyDumpsCommand.option('-k',
+                            '--key',
+                            action='append',
+                            dest='keys',
+                            help='GPG key to use for en-/decryption. May be specified multiple times.')
+def create(encrypt, keys):
     """Create a backup based on SQLAlchemy mapped classes"""
 
     # create backup files
     alchemy = AlchemyDumpsDatabase()
     data = alchemy.get_data()
-    backup = Backup()
+    backup = Backup(encrypt=encrypt, keys=keys)
     date_id = backup.create_id()
     for class_name in data.keys():
         name = backup.get_name(date_id, class_name)
@@ -90,12 +101,26 @@ def history():
                             default=False,
                             help='The date part of a file from the AlchemyDumps\
                                  folder')
-def restore(date_id):
+@AlchemyDumpsCommand.option('-e',
+                            '--encrypted',
+                            dest='encrypted',
+                            action='store_true',
+                            default=False,
+                            help='Decrypt files before restoring')
+@AlchemyDumpsCommand.option('-p',
+                            '--passphrase',
+                            dest='passphrase',
+                            action='store_true',
+                            default=False,
+                            help='Ask for passphrase')
+def restore(date_id, encrypted, passphrase):
     """Restore a backup based on the date part of the backup files"""
 
     # check if date/id is valid
     alchemy = AlchemyDumpsDatabase()
-    backup = Backup()
+    if passphrase:
+        passphrase = getpass('Please input your passphrase: ')
+    backup = Backup(encrypt=encrypted, passphrase=passphrase)
     if backup.valid(date_id):
 
         # loop through backup files

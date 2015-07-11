@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import gnupg
 import gzip
 import re
 from datetime import datetime
@@ -13,26 +14,43 @@ from unipath import Path
 class Backup(object):
     """Manages backup files through local or FTP file systems"""
 
-    def __init__(self):
+    def __init__(self, file_prefix='db-bkp', encrypt=False, keys=[], passphrase=None):
         self.ftp = self.__get_ftp()
         self.path = self.__get_path()
         self.files = self.__get_files()
-        self.file_prefix = 'db-bkp'
+        self.file_prefix = file_prefix
+        self.encrypt = encrypt
+
+        if self.encrypt:
+            self.gpg = gnupg.GPG()
+            self.keys = keys
+            self.passphrase = passphrase
 
     # core methods
 
     def create_file(self, name, contents):
         """
-        Creates a gzip file
+        Creates a gzip file, optionally encrypted
         :param name: (str) name of the file to be created
         :param contents: (str) contents to be written in the file
         :return: (str or False) path of the created file
         """
-
         # write a tmp file
         tmp = mkstemp()[1]
         with gzip.open(tmp, 'wb') as handler:
             handler.write(contents)
+
+        # encrypt the file
+        if self.encrypt:
+            # import ipdb; ipdb.set_trace()
+            tmp_encrypted_file = mkstemp()[1]
+            encrypted_contents = self.gpg.encrypt_file(open(tmp, 'rb'),
+                                                       self.keys,
+                                                       armor=False)
+            with open(tmp_encrypted_file, 'wb') as encrypted_file:
+                encrypted_file.write(encrypted_contents.data)
+            Path(tmp).remove()
+            tmp = tmp_encrypted_file
 
         # send it to the FTP server
         if self.ftp:
@@ -50,12 +68,27 @@ class Backup(object):
 
     def read_file(self, name):
         """Reads the contents of a gzip file"""
+
         if self.ftp:
             path = mkstemp()[1]
             with open(path, 'wb') as tmp:
                 self.ftp.retrbinary('RETR {}'.format(name), tmp.write)
         else:
             path = Path(self.path).child(name)
+
+        if self.encrypt:
+            encrypted_path = path
+            # strip '.gpg' from file name
+            path = path[:-4]
+            with open(encrypted_path, 'rb') as ehandler:
+                g = self.gpg.decrypt_file(ehandler, passphrase=self.passphrase)
+            if not g.ok:
+                raise Exception('unable to decrypt file')
+
+            with open(path, 'wb') as handler:
+                handler.write(g.data)
+
+
         with gzip.open(path, 'rb') as handler:
             return handler.read()
 
@@ -105,7 +138,10 @@ class Backup(object):
         Creates a backup file name given the nuemric timestamp ID and the name
         of the SQLAlchemy mapped class
         """
-        return '{}-{}-{}.gz'.format(self.file_prefix, date_id, class_name)
+        name = '{}-{}-{}.gz'.format(self.file_prefix, date_id, class_name)
+        if self.encrypt:
+            name += '.gpg'
+        return name
 
     @staticmethod
     def parsed_id(date_id):
