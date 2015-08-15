@@ -16,7 +16,7 @@ setup(name='Flask-AlchemyDumps',
                    'Topic :: System :: Archiving :: Backup',
                    'Topic :: Utilities'],
       keywords='backup, sqlalchemy, flask, restore, dumps, serialization, ' + \
-               'ftp, gpg'
+               'ftp, gpg',
       url='https://github.com/cuducos/alchemydumps',
       author='Eduardo Cuducos',
       author_email='cuducos@gmail.com',
