@@ -1,21 +1,19 @@
+ATTENTION
+---------
+**Terribly hacky (well, a bit at least) fork of alchemydumps to integrate
+support for GPG encryption. Don't come running if it gobbles up the only copy of
+the pictures of your newborn child.**
+
+Other stuff:
+
+* Now saves to a timestamped directory instead of writing everything into one
+dir
+* Removes dependency on unipath
+
+Thanks @cuducos for creating it in the first place :)
+
 AlchemyDumps
 ------------
-
-.. image:: https://img.shields.io/pypi/status/flask_alchemydumps.svg?style=flat
-    :target: https://pypi.python.org/pypi/Flask-AlchemyDumps/
-    :alt: Development Status: Alpha
-.. image:: https://img.shields.io/pypi/v/flask_alchemydumps.svg?style=flat
-    :target: https://pypi.python.org/pypi/Flask-AlchemyDumps/
-    :alt: Lastest Version
-.. image:: https://img.shields.io/travis/cuducos/alchemydumps.svg?style=flat
-    :target: https://travis-ci.org/cuducos/alchemydumps
-    :alt: Travis CI
-.. image:: https://img.shields.io/pypi/dm/flask_alchemydumps.svg?style=flat
-    :target: https://pypi.python.org/pypi//Flask-AlchemyDumps/
-    :alt: Downloads
-.. image:: https://img.shields.io/pypi/l/flask_alchemydumps.svg?style=flat
-    :target: https://pypi.python.org/pypi/Flask-AlchemyDumps/
-    :alt: License
 
 Do you use `Flask <http://flask.pocoo.org>`_ with `SQLAlchemy <http://www.sqlalchemy.org/>`_  and `Flask-Script <http://flask-script.readthedocs.org/en/latest/>`_ ? Wow, what a coincidence!
 
@@ -62,8 +60,8 @@ If you want to save your backups in a remote server via FTP, just make sure to s
 
     ALCHEMYDUMPS_FTP_SERVER = 'ftp.server.com'
     ALCHEMYDUMPS_FTP_USER = 'johndoe'
-    ALCHEMYDUMPS_FTP_PASSWORD = 'secret' 
-    ALCHEMYDUMPS_FTP_PATH = '/absolute/path/' 
+    ALCHEMYDUMPS_FTP_PASSWORD = 'secret'
+    ALCHEMYDUMPS_FTP_PATH = '/absolute/path/'
 
 If you want, there is a ``.env.sample`` inside the ``/tests`` folder. Just copy it to your application root folder, rename it to ``.env``, and insert your credentials.
 
@@ -112,7 +110,7 @@ You can list the backups you have already created
     $ python manage.py alchemydumps history
 
 Output:
-	
+
 ::
 
     ==> ID: 20141114203949 (from Nov 15, 2014 at 17:21:07)

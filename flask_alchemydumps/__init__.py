@@ -4,6 +4,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
+
 # import third party modules
 from flask.ext.script import Manager
 from getpass import getpass
@@ -57,10 +59,14 @@ def create(encrypt, keys):
     # create backup files
     alchemy = AlchemyDumpsDatabase()
     data = alchemy.get_data()
+
     backup = Backup(encrypt=encrypt, keys=keys)
     date_id = backup.create_id()
+
+    os.mkdir(os.path.join(backup.path, date_id))
+
     for class_name in data.keys():
-        name = backup.get_name(date_id, class_name)
+        name = os.path.join(date_id, backup.get_name(date_id, class_name))
         full_path = backup.create_file(name, data[class_name])
         rows = len(alchemy.parse_data(data[class_name]))
         if full_path:
@@ -127,10 +133,10 @@ def restore(date_id, encrypted, passphrase):
         for mapped_class in alchemy.get_mapped_classes():
             class_name = mapped_class.__name__
             name = backup.get_name(date_id, class_name)
-            if name in backup.files:
+            if name in os.listdir(os.path.join(backup.path, date_id)):
 
                 # read file contents
-                contents = backup.read_file(name)
+                contents = backup.read_file(os.path.join(backup.path, date_id, name))
                 fails = list()
 
                 # restore to the db

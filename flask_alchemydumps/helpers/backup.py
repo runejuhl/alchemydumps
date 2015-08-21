@@ -2,14 +2,14 @@
 
 import gnupg
 import gzip
+import os
 import re
 from datetime import datetime
 from flask import current_app
 from ftplib import FTP, error_perm
+from shutil import copy2
 from tempfile import mkstemp
-from time import gmtime, strftime
-from unipath import Path
-
+from time import time
 
 class Backup(object):
     """Manages backup files through local or FTP file systems"""
@@ -42,14 +42,13 @@ class Backup(object):
 
         # encrypt the file
         if self.encrypt:
-            # import ipdb; ipdb.set_trace()
             tmp_encrypted_file = mkstemp()[1]
             encrypted_contents = self.gpg.encrypt_file(open(tmp, 'rb'),
                                                        self.keys,
                                                        armor=False)
             with open(tmp_encrypted_file, 'wb') as encrypted_file:
                 encrypted_file.write(encrypted_contents.data)
-            Path(tmp).remove()
+            os.remove(tmp)
             tmp = tmp_encrypted_file
 
         # send it to the FTP server
@@ -59,12 +58,9 @@ class Backup(object):
 
         # or save it locally
         else:
-            new_path = Path(self.path).child(name)
-            tmp_path = Path(tmp)
-            tmp_path.copy(new_path)
-            if new_path.exists():
-                return new_path.absolute()
-            return False
+            new_path = os.path.join(self.path, name)
+            copy2(tmp, new_path)
+            return new_path
 
     def read_file(self, name):
         """Reads the contents of a gzip file"""
@@ -74,7 +70,7 @@ class Backup(object):
             with open(path, 'wb') as tmp:
                 self.ftp.retrbinary('RETR {}'.format(name), tmp.write)
         else:
-            path = Path(self.path).child(name)
+            path = os.path.join(self.path, name)
 
         if self.encrypt:
             encrypted_path = path
@@ -97,8 +93,8 @@ class Backup(object):
         if self.ftp:
             self.ftp.delete(name)
         else:
-            path = Path(self.path).child(name)
-            path.remove()
+            path = os.path.join(self.path, name)
+            os.remove(path)
 
     # helper methods
 
@@ -111,20 +107,13 @@ class Backup(object):
         return [f for f in self.files if date_id == self.__get_id(f)]
 
     @staticmethod
-    def create_id(reference=False):
+    def create_id():
         """Creates a numeric timestamp ID from a datetime"""
-        if not reference:
-            reference = gmtime()
-        return str(strftime("%Y%m%d%H%M%S", reference))
+        return str(int(time()))
 
     def get_ids(self):
         """Gets the different existing timestamp numeric IDs"""
-        file_ids = list()
-        for f in self.files:
-            file_id = self.__get_id(f)
-            if file_id and file_id not in file_ids:
-                file_ids.append(file_id)
-        return file_ids
+        return self.files
 
     def valid(self, date_id):
         """Check backup files for the given timestamp numeric ID"""
@@ -146,8 +135,8 @@ class Backup(object):
     @staticmethod
     def parsed_id(date_id):
         """Transforms a timestamp ID in a humanized date"""
-        date_parsed = datetime.strptime(date_id, '%Y%m%d%H%M%S')
-        return date_parsed.strftime('%b %d, %Y at %H:%M:%S')
+        date_parsed = datetime.fromtimestamp(date_id)
+        return date_parsed.isoformat()
 
     def close_connection(self):
         """If is there any open FTP connection, closes it"""
@@ -175,7 +164,7 @@ class Backup(object):
             list_files = self.ftp.nlst()
             return [f for f in list_files if self.__get_id(f)]
         else:
-            return [f.name for f in Path(self.path).listdir()]
+            return [f for f in os.listdir(self.path)]
 
     def __get_path(self):
         """
