@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='Flask-AlchemyDumps',
-      version='0.0.10-gpg',
+      version='0.0.10.gpg',
       description='SQLAlchemy backup/dump tool for Flask',
       long_description=open('README.rst').read(),
       classifiers=['Development Status :: 3 - Alpha',
